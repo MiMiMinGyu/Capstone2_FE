@@ -1,8 +1,14 @@
+import { BrowserRouter as Router } from 'react-router-dom';
+import AppRoutes from './router';
+import './styles/telegram-theme.css';
+
 function App() {
   return (
-    <div>
-      <h1> LikemeLikeMe </h1>
-    </div>
+    <Router>
+      <div className="App">
+        <AppRoutes />
+      </div>
+    </Router>
   );
 }
 

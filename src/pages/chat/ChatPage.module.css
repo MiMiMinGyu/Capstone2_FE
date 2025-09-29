@@ -1,0 +1,7 @@
+.chatPage {
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--tg-background);
+  font-family: var(--tg-font-family);
+  overflow: hidden;
+}
