@@ -1,0 +1,260 @@
+.chatContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--tg-background);
+  font-family: var(--tg-font-family);
+}
+
+.chatHeader {
+  background-color: var(--tg-primary);
+  color: var(--tg-text-inverse);
+  padding: var(--tg-spacing-md) var(--tg-spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--tg-shadow-small);
+  z-index: 10;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-spacing-sm);
+}
+
+.backButton {
+  background: none;
+  border: none;
+  color: var(--tg-text-inverse);
+  font-size: var(--tg-font-size-lg);
+  cursor: pointer;
+  padding: var(--tg-spacing-xs);
+  border-radius: var(--tg-radius-small);
+  transition: var(--tg-transition);
+}
+
+.backButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.headerTitle {
+  font-size: var(--tg-font-size-lg);
+  font-weight: 600;
+  margin: 0;
+}
+
+.headerSubtitle {
+  font-size: var(--tg-font-size-xs);
+  opacity: 0.8;
+  margin: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-spacing-sm);
+}
+
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-spacing-xs);
+  font-size: var(--tg-font-size-xs);
+  opacity: 0.8;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--tg-success);
+}
+
+.statusDot.offline {
+  background-color: var(--tg-text-secondary);
+}
+
+.refreshButton {
+  background: none;
+  border: none;
+  color: var(--tg-text-inverse);
+  font-size: var(--tg-font-size-md);
+  cursor: pointer;
+  padding: var(--tg-spacing-xs);
+  border-radius: var(--tg-radius-small);
+  transition: var(--tg-transition);
+}
+
+.refreshButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.refreshButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chatBody {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.messagesSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.recommendationSection {
+  width: 400px;
+  border-left: 1px solid var(--tg-border);
+  background-color: var(--tg-surface);
+}
+
+.mobileRecommendationOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--tg-background);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobileRecommendationHeader {
+  background-color: var(--tg-primary);
+  color: var(--tg-text-inverse);
+  padding: var(--tg-spacing-md) var(--tg-spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--tg-spacing-sm);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: var(--tg-text-inverse);
+  font-size: var(--tg-font-size-lg);
+  cursor: pointer;
+  padding: var(--tg-spacing-xs);
+  border-radius: var(--tg-radius-small);
+  transition: var(--tg-transition);
+}
+
+.closeButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.noMessageSelected {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--tg-text-secondary);
+  text-align: center;
+  padding: var(--tg-spacing-2xl);
+}
+
+.noMessageIcon {
+  font-size: 64px;
+  margin-bottom: var(--tg-spacing-lg);
+  opacity: 0.3;
+}
+
+.noMessageTitle {
+  font-size: var(--tg-font-size-lg);
+  font-weight: 500;
+  margin-bottom: var(--tg-spacing-sm);
+  color: var(--tg-text-primary);
+}
+
+.noMessageDescription {
+  font-size: var(--tg-font-size-sm);
+  line-height: 1.5;
+  max-width: 300px;
+}
+
+/* Loading animation for refresh button */
+.refreshButton.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .recommendationSection {
+    width: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .chatBody {
+    flex-direction: column;
+  }
+
+  .messagesSection {
+    flex: 1;
+  }
+
+  .recommendationSection {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--tg-border);
+    max-height: 40vh;
+  }
+
+  .chatHeader {
+    padding: var(--tg-spacing-sm) var(--tg-spacing-md);
+  }
+
+  .headerTitle {
+    font-size: var(--tg-font-size-md);
+  }
+
+  .headerSubtitle {
+    display: none;
+  }
+
+  .statusIndicator {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .recommendationSection {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    max-height: none;
+    border: none;
+  }
+
+  .noMessageIcon {
+    font-size: 48px;
+  }
+
+  .noMessageTitle {
+    font-size: var(--tg-font-size-md);
+  }
+
+  .noMessageDescription {
+    font-size: var(--tg-font-size-xs);
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/awing/OneDrive/사진/스크린샷/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
