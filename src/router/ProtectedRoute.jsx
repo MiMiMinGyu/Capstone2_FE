@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import UnauthenticatedPage from '../pages/auth/UnauthenticatedPage';
 
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = () => {
@@ -7,7 +7,7 @@ const ProtectedRoute = ({ children }) => {
   };
 
   if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
+    return <UnauthenticatedPage />;
   }
 
   return children;

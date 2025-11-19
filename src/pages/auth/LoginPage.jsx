@@ -84,7 +84,12 @@ const LoginPage = () => {
       localStorage.setItem('refresh_token', data.refresh_token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      navigate('/chat');
+      // 환영 메시지
+      const userName = data.user.name || data.user.username || '사용자';
+      alert(`환영합니다 ${userName}님!`);
+
+      // 메인페이지로 이동
+      navigate('/');
     } catch (error) {
       console.error('Login error:', error);
       setErrors({ general: '네트워크 오류가 발생했습니다' });
@@ -96,6 +101,13 @@ const LoginPage = () => {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
+        <button
+          className={styles.closeButton}
+          onClick={() => navigate('/')}
+          aria-label="닫기"
+        >
+          ✕
+        </button>
         <div className={styles.header}>
           <div className={styles.logo}>
             <span className={styles.logoIcon}>💬</span>

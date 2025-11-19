@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import MainPage from '../pages/main/MainPage';
 import ChatPage from '../pages/chat';
 import LoginPage from '../pages/auth/LoginPage';
 import SignupPage from '../pages/auth/SignupPage';
@@ -10,15 +11,22 @@ const AppRoutes = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route
-        path="/chat"
+        path="/"
+        element={
+          <ProtectedRoute>
+            <MainPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat/:userId"
         element={
           <ProtectedRoute>
             <ChatPage />
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/chat" replace />} />
-      <Route path="*" element={<Navigate to="/chat" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

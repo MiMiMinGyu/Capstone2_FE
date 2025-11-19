@@ -118,6 +118,13 @@ const SignupPage = () => {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
+        <button
+          className={styles.closeButton}
+          onClick={() => navigate('/')}
+          aria-label="닫기"
+        >
+          ✕
+        </button>
         <div className={styles.header}>
           <div className={styles.logo}>
             <span className={styles.logoIcon}>💬</span>
