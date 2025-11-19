@@ -1,0 +1,132 @@
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import styles from './Header.module.css';
+
+const Header = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // 로그인 상태 확인
+    const token = localStorage.getItem('access_token');
+    setIsLoggedIn(!!token);
+  }, []);
+
+  // 현재 활성 메뉴 확인
+  const isActiveMenu = (menu) => {
+    // 로그인하지 않은 상태에서는 활성 메뉴 표시 안 함
+    if (!isLoggedIn) {
+      return false;
+    }
+
+    const path = location.pathname;
+
+    switch(menu) {
+      case '채팅':
+        return path === '/' || path.startsWith('/chat');
+      case '카카오톡 업로드':
+        return path === '/kakao-upload';
+      case '내 말투 설정':
+        return path === '/style-settings';
+      case '설정':
+        return path === '/settings';
+      default:
+        return false;
+    }
+  };
+
+  const handleAuthClick = () => {
+    if (isLoggedIn) {
+      // 로그아웃
+      const userName = JSON.parse(localStorage.getItem('user') || '{}').name ||
+                       JSON.parse(localStorage.getItem('user') || '{}').username ||
+                       '사용자';
+
+      localStorage.clear();
+      setIsLoggedIn(false);
+
+      alert(`${userName}님, 로그아웃되었습니다.`);
+
+      // 페이지 리로드하여 완전히 초기화
+      window.location.href = '/';
+    } else {
+      // 로그인 페이지로 이동
+      navigate('/login');
+    }
+  };
+
+  const handleNavClick = (menu) => {
+    // 로그인 확인
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      alert('로그인이 필요한 기능입니다');
+      navigate('/login');
+      return;
+    }
+
+    console.log(`${menu} 클릭됨`);
+
+    switch(menu) {
+      case '채팅':
+        navigate('/');
+        break;
+      case '카카오톡 업로드':
+        // TODO: 업로드 모달 열기
+        alert('카카오톡 업로드 기능은 곧 구현될 예정입니다');
+        break;
+      case '내 말투 설정':
+        // TODO: 말투 설정 모달 열기
+        alert('말투 설정 기능은 곧 구현될 예정입니다');
+        break;
+      case '설정':
+        // TODO: 설정 페이지/모달 열기
+        alert('설정 기능은 곧 구현될 예정입니다');
+        break;
+      default:
+        break;
+    }
+  };
+
+  return (
+    <header className={styles.header}>
+      <div className={styles.logo} onClick={() => navigate('/')}>
+        <span className={styles.logoIcon}>💬</span>
+        <h1 className={styles.logoText}>LikemeLikeMe</h1>
+      </div>
+
+      <nav className={styles.nav}>
+        <button
+          className={`${styles.navButton} ${isActiveMenu('채팅') ? styles.navButtonActive : ''}`}
+          onClick={() => handleNavClick('채팅')}
+        >
+          채팅
+        </button>
+        <button
+          className={`${styles.navButton} ${isActiveMenu('카카오톡 업로드') ? styles.navButtonActive : ''}`}
+          onClick={() => handleNavClick('카카오톡 업로드')}
+        >
+          카카오톡 업로드
+        </button>
+        <button
+          className={`${styles.navButton} ${isActiveMenu('내 말투 설정') ? styles.navButtonActive : ''}`}
+          onClick={() => handleNavClick('내 말투 설정')}
+        >
+          내 말투 설정
+        </button>
+        <button
+          className={`${styles.navButton} ${isActiveMenu('설정') ? styles.navButtonActive : ''}`}
+          onClick={() => handleNavClick('설정')}
+        >
+          설정
+        </button>
+      </nav>
+
+      <button className={styles.logoutButton} onClick={handleAuthClick}>
+        {isLoggedIn ? '로그아웃' : '로그인'}
+      </button>
+    </header>
+  );
+};
+
+export default Header;
