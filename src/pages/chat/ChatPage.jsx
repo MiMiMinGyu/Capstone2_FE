@@ -1,239 +1,464 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import ChatContainer from '../../features/chat/components/ChatContainer';
-import { telegramAPI } from '../../api/endpoints/chat.js';
-import '../../styles/telegram-theme.css';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { telegramAPI } from '../../api/endpoints/chat';
+import { relationshipAPI, RELATIONSHIP_LABELS, POLITENESS_LABELS, VIBE_LABELS } from '../../api/endpoints/relationship';
+import Header from '../../components/layout/Header';
 import styles from './ChatPage.module.css';
 
 const ChatPage = () => {
-  // 메시지 상태 관리
-  const [serverMessages, setServerMessages] = useState([]);
-  const [localMessages, setLocalMessages] = useState(() => {
-    try {
-      const saved = localStorage.getItem('localMessages');
-      return saved ? JSON.parse(saved) : [];
-    } catch (error) {
-      console.error('로컬 메시지 복원 실패:', error);
-      return [];
-    }
+  const { userId: partnerId } = useParams();
+  const navigate = useNavigate();
+
+  const [conversations, setConversations] = useState([]);
+  const [partner, setPartner] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [inputText, setInputText] = useState('');
+  const [showConversationList, setShowConversationList] = useState(false);
+  const [relationship, setRelationship] = useState(null);
+  const [showRelationshipModal, setShowRelationshipModal] = useState(false);
+  const [relationshipForm, setRelationshipForm] = useState({
+    category: '',
+    politeness: '',
+    vibe: '',
+    emojiLevel: 0
   });
 
-  // UI 상태 관리
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [botStatus, setBotStatus] = useState('online');
-
-  // 재시도 관리
-  const retryCount = useRef(0);
-  const maxRetries = 3;
-
-  // 메시지 병합 및 시간순 정렬 (서버 메시지와 로컬 메시지 통합)
-  const messages = useMemo(() => {
-    const allMessages = [...serverMessages, ...localMessages];
-    return allMessages.sort((a, b) => {
-      const timeA = new Date(a.timestamp).getTime();
-      const timeB = new Date(b.timestamp).getTime();
-      return timeA - timeB;
-    });
-  }, [serverMessages, localMessages]);
-
-  // 서버에서 메시지 목록을 가져오는 함수 (재시도 로직 포함)
-  const fetchMessages = useCallback(async (isRetry = false) => {
+  // 대화 목록 가져오기
+  const fetchConversations = useCallback(async () => {
     try {
-      if (!isRetry) setError(null);
-
-      const data = await telegramAPI.getMessages(isRetry);
-      const newMessages = Array.isArray(data) ? data : [];
-
-      // 메시지가 변경된 경우에만 상태 업데이트 (불필요한 리렌더링 방지)
-      setServerMessages(prevMessages => {
-        if (JSON.stringify(prevMessages) !== JSON.stringify(newMessages)) {
-          return newMessages;
-        }
-        return prevMessages;
-      });
-
-      retryCount.current = 0;
-      if (error) setError(null);
+      const data = await telegramAPI.getConversations();
+      setConversations(data);
     } catch (err) {
-      console.error('메시지 로딩 오류:', err);
-      const errorMessage = err.userMessage || err.message || '메시지를 불러오는 중 오류가 발생했습니다.';
-      setError(errorMessage);
+      console.error('대화 목록 조회 실패:', err);
+    }
+  }, []);
 
-      if (err.code === 'ERR_NETWORK') {
-        retryCount.current++;
-        if (retryCount.current >= maxRetries) {
-          console.error('최대 재시도 횟수 초과:', retryCount.current);
+  // 관계 정보 가져오기
+  const fetchRelationship = useCallback(async () => {
+    if (!partnerId) return;
+
+    try {
+      const relationships = await relationshipAPI.getRelationships();
+      const currentRelationship = relationships.find(
+        (rel) => rel.partner_id === partnerId
+      );
+
+      if (currentRelationship) {
+        setRelationship(currentRelationship);
+        setRelationshipForm({
+          category: currentRelationship.category,
+          politeness: currentRelationship.politeness,
+          vibe: currentRelationship.vibe,
+          emojiLevel: currentRelationship.emoji_level
+        });
+      } else {
+        setRelationship(null);
+      }
+    } catch (err) {
+      console.error('관계 정보 조회 실패:', err);
+    }
+  }, [partnerId]);
+
+  // 관계 저장/수정
+  const handleSaveRelationship = async () => {
+    // 필수 필드 검증
+    if (!relationshipForm.category) {
+      alert('관계 카테고리를 선택해주세요');
+      return;
+    }
+
+    try {
+      // 빈 값을 제거하고 API에 전달 (선택 필드만)
+      const requestData = {
+        partnerId: partnerId,
+        category: relationshipForm.category,
+        ...(relationshipForm.politeness && { politeness: relationshipForm.politeness }),
+        ...(relationshipForm.vibe && { vibe: relationshipForm.vibe }),
+        emojiLevel: relationshipForm.emojiLevel
+      };
+
+      if (relationship) {
+        // 수정
+        await relationshipAPI.updateRelationship(relationship.id, requestData);
+      } else {
+        // 생성
+        await relationshipAPI.createRelationship(requestData);
+      }
+      await fetchRelationship();
+      setShowRelationshipModal(false);
+    } catch (err) {
+      console.error('관계 저장 실패:', err);
+      alert('관계 설정 저장에 실패했습니다');
+    }
+  };
+
+  const handleGenerateRecommendations = useCallback(async (messageId) => {
+    try {
+      setRecommendationLoading(true);
+      const result = await telegramAPI.generateRecommendations(messageId);
+      setRecommendations(result.recommendations || []);
+    } catch (err) {
+      console.error('AI 추천 생성 실패:', err);
+      setRecommendations([]);
+    } finally {
+      setRecommendationLoading(false);
+    }
+  }, []);
+
+  const fetchConversationMessages = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(
+        `http://localhost:3000/telegram/conversations/${partnerId}/messages`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('대화 내역을 불러오지 못했습니다');
+      }
+
+      const data = await response.json();
+      setPartner(data.partner);
+      setMessages(data.messages || []);
+
+      if (data.messages && data.messages.length > 0) {
+        const lastMessage = data.messages[data.messages.length - 1];
+        if (lastMessage.role === 'user') {
+          handleGenerateRecommendations(lastMessage.id);
         }
       }
+    } catch (err) {
+      console.error('대화 메시지 조회 실패:', err);
+      setError(err.message || '대화를 불러오는 중 오류가 발생했습니다');
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, [partnerId, handleGenerateRecommendations]);
 
-  // 봇 상태 확인
-  const checkBotStatus = useCallback(async () => {
-    try {
-      const status = await telegramAPI.getBotStatus();
-      setBotStatus(status?.status === 'Telegram bot is running' ? 'online' : 'offline');
-    } catch (err) {
-      console.error('봇 상태 확인 오류:', err);
-      setBotStatus('offline');
-    }
-  }, []);
-
-  // 특정 메시지에 대한 AI 추천 답변 생성
-  const handleGenerateRecommendations = useCallback(async (messageId) => {
-    try {
-      const result = await telegramAPI.generateRecommendations(messageId);
-
-      // 해당 메시지에 AI 추천 결과 추가
-      setServerMessages(prevMessages =>
-        prevMessages.map(msg =>
-          msg.id === messageId
-            ? { ...msg, aiRecommendations: result.recommendations || [] }
-            : msg
-        )
-      );
-
-      return result;
-    } catch (err) {
-      console.error('AI 추천 생성 오류:', err);
-      const errorMessage = err.userMessage || 'AI 추천 생성에 실패했습니다.';
-      throw new Error(errorMessage);
-    }
-  }, []);
-
-  // 선택한 답변을 텔레그램으로 전송하는 함수
-  const handleSendReply = useCallback(async (messageId, selectedReply) => {
-    try {
-      // 원본 메시지를 답장 완료 상태로 업데이트
-      setServerMessages(prevMessages =>
-        prevMessages.map(msg =>
-          msg.id === messageId
-            ? { ...msg, replied: true, selectedReply, isRead: true }
-            : msg
-        )
-      );
-
-      // 내가 보낸 답장을 로컬 메시지 목록에 추가
-      const originalMessage = serverMessages.find(msg => msg.id === messageId);
-      const replyMessage = {
-        id: `reply_${messageId}_${Date.now()}`,
-        messageId: Date.now(),
-        from: {
-          id: 'user',
-          first_name: '나',
-          username: 'me'
-        },
-        chat: originalMessage?.chat || { id: 'unknown', type: 'private' },
-        text: selectedReply,
-        timestamp: new Date().toISOString(),
-        isRead: true,
-        replied: false,
-        aiRecommendations: [],
-        isOutgoing: true
-      };
-
-      setLocalMessages(prevMessages => [...prevMessages, replyMessage]);
-
-      // 백엔드 API 호출
-      await telegramAPI.sendReply(messageId, selectedReply);
-      return { success: true };
-    } catch (err) {
-      console.error('답장 전송 실패:', err);
-      const errorMessage = err.userMessage || '답변 전송에 실패했습니다.';
-      throw new Error(errorMessage);
-    }
-  }, [serverMessages]);
-
-  // 로컬 메시지 localStorage 저장
   useEffect(() => {
-    try {
-      localStorage.setItem('localMessages', JSON.stringify(localMessages));
-    } catch (error) {
-      console.error('로컬 메시지 저장 실패:', error);
+    fetchConversations();
+
+    if (partnerId) {
+      fetchConversationMessages();
+      fetchRelationship();
     }
-  }, [localMessages]);
 
-  // 수동 새로고침
-  const handleRefresh = useCallback(async () => {
-    setLoading(true);
-    retryCount.current = 0;
-    await fetchMessages();
-    await checkBotStatus();
-  }, [fetchMessages, checkBotStatus]);
-
-
-  // SSE 오류 처리
-  const handleSSEError = useCallback(() => {
-    checkBotStatus();
-  }, [checkBotStatus]);
-
-  // 초기 로드
-  useEffect(() => {
-    fetchMessages();
-    checkBotStatus();
-  }, [fetchMessages, checkBotStatus]);
-
-  // 실시간 메시지 수신을 위한 SSE(Server-Sent Events) 연결 관리
-  useEffect(() => {
-    let isMounted = true;
     const eventSource = new EventSource('http://localhost:3000/telegram/events');
 
-    // 새로 수신된 메시지를 처리하는 헬퍼 함수
-    const handleNewMessage = (messageData) => {
-      try {
-        const newMessage = JSON.parse(messageData);
-        // 중복 메시지 방지: 이미 존재하는 메시지는 추가하지 않음
-        setServerMessages(prevMessages => {
-          const exists = prevMessages.find(msg => msg.id === newMessage.id);
-          if (exists) return prevMessages;
-          return [...prevMessages, newMessage];
-        });
-      } catch (error) {
-        console.error('메시지 파싱 오류:', error);
-      }
-    };
-
-    eventSource.onopen = () => {
-      if (!isMounted) return;
-      retryCount.current = 0;
-    };
-
     eventSource.onmessage = (event) => {
-      if (!isMounted) return;
-      handleNewMessage(event.data);
+      const newMessage = JSON.parse(event.data);
+      console.log('새 메시지 도착:', newMessage);
+      fetchConversationMessages();
+      fetchConversations();
     };
-
-    eventSource.addEventListener('newMessage', (event) => {
-      if (!isMounted) return;
-      handleNewMessage(event.data);
-    });
 
     eventSource.onerror = (error) => {
       console.error('SSE 연결 오류:', error);
-      handleSSEError();
     };
 
     return () => {
-      isMounted = false;
-      if (eventSource.readyState !== EventSource.CLOSED) {
-        eventSource.close();
-      }
+      eventSource.close();
     };
-  }, [handleSSEError]);
+  }, [partnerId, fetchConversationMessages, fetchConversations, fetchRelationship]);
+
+  const handleSendReply = async (messageId, selectedReply) => {
+    try {
+      await telegramAPI.sendReply(messageId, selectedReply);
+      setRecommendations([]);
+      fetchConversationMessages();
+    } catch (err) {
+      console.error('답변 전송 실패:', err);
+      alert('답변 전송에 실패했습니다');
+    }
+  };
+
+  const handleSendCustomMessage = async () => {
+    if (!inputText.trim()) return;
+
+    try {
+      // 직접 메시지 전송 API 호출
+      await telegramAPI.sendMessage(partner.telegram_id, inputText);
+      setInputText('');
+      fetchConversationMessages();
+    } catch (err) {
+      console.error('메시지 전송 실패:', err);
+      alert('메시지 전송에 실패했습니다');
+    }
+  };
+
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading && messages.length === 0) {
+    return (
+      <div className={styles.container}>
+        <Header />
+        <div className={styles.loading}>로딩 중...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <Header />
+        <div className={styles.error}>
+          <p>{error}</p>
+          <button onClick={() => navigate('/')}>돌아가기</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={styles.chatPage}>
-      <ChatContainer
-        messages={messages}
-        loading={loading}
-        error={error}
-        onRefresh={handleRefresh}
-        onGenerateRecommendations={handleGenerateRecommendations}
-        onSendReply={handleSendReply}
-        botStatus={botStatus}
-      />
+    <div className={styles.container}>
+      <Header />
+
+      <div className={styles.chatLayout}>
+        {/* 햄버거 메뉴 버튼 (작은 화면에서만 표시) */}
+        <button
+          className={styles.hamburgerButton}
+          onClick={() => setShowConversationList(!showConversationList)}
+        >
+          ☰
+        </button>
+
+        {/* 왼쪽: 대화 목록 (30%) */}
+        <div className={`${styles.conversationList} ${showConversationList ? styles.conversationListMobileShow : ''}`}>
+          <div className={styles.conversationHeader}>
+            <h3 className={styles.conversationTitle}>대화 목록</h3>
+            <button
+              className={styles.closeListButton}
+              onClick={() => setShowConversationList(false)}
+            >
+              ✕
+            </button>
+          </div>
+          <div className={styles.conversationItems}>
+            {conversations.map((conv) => (
+              <div
+                key={conv.partner_id}
+                className={`${styles.conversationItem} ${
+                  conv.partner_id === partnerId ? styles.conversationItemActive : ''
+                }`}
+                onClick={() => {
+                  navigate(`/chat/${conv.partner_id}`);
+                  setShowConversationList(false);
+                }}
+              >
+                <div className={styles.avatar}>
+                  <span className={styles.avatarText}>
+                    {conv.partner_name?.[0]?.toUpperCase() || '?'}
+                  </span>
+                </div>
+                <div className={styles.conversationContent}>
+                  <span className={styles.name}>{conv.partner_name}</span>
+                  <span className={styles.lastMessage}>{conv.last_message}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 오른쪽: 채팅 윈도우 (70%) */}
+        <div className={styles.chatWindow}>
+          <div className={styles.chatHeader}>
+            <button className={styles.backButton} onClick={() => navigate('/')}>
+              ←
+            </button>
+            <div className={styles.chatHeaderInfo}>
+              <h2 className={styles.chatTitle}>{partner?.name || '대화 상대'}</h2>
+              <p className={styles.chatSubtitle}>
+                {relationship ? RELATIONSHIP_LABELS[relationship.category] : '관계 미설정'} · {messages.length}개의 메시지
+              </p>
+            </div>
+            <button
+              className={styles.relationshipButton}
+              onClick={() => setShowRelationshipModal(true)}
+              title="관계 설정"
+            >
+              ⚙️
+            </button>
+          </div>
+
+          <div className={styles.messagesContainer}>
+            {messages.length === 0 ? (
+              <div className={styles.emptyMessages}>
+                <p>메시지가 없습니다</p>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`${styles.messageItem} ${
+                    message.role === 'assistant' ? styles.messageOutgoing : styles.messageIncoming
+                  }`}
+                >
+                  <div className={styles.messageBubble}>
+                    <p className={styles.messageText}>{message.text}</p>
+                    <span className={styles.messageTime}>
+                      {formatTime(message.created_at)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* AI 추천 답변 (채팅창 하단에 인라인) */}
+          {recommendationLoading && (
+            <div className={styles.recommendationInline}>
+              <p className={styles.recommendationLabel}>💡 AI 추천 답변 생성 중...</p>
+              <div className={styles.loadingSpinner}>
+                <div className={styles.spinner}></div>
+              </div>
+            </div>
+          )}
+          {!recommendationLoading && recommendations.length > 0 && (
+            <div className={styles.recommendationInline}>
+              <p className={styles.recommendationLabel}>💡 AI 추천 답변</p>
+              <div className={styles.recommendationButtons}>
+                {recommendations.map((rec, index) => (
+                  <button
+                    key={index}
+                    className={styles.recommendationButton}
+                    onClick={() => handleSendReply(rec.messageId, rec.text)}
+                  >
+                    {rec.text}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 메시지 입력창 */}
+          <div className={styles.inputContainer}>
+            <input
+              type="text"
+              className={styles.messageInput}
+              placeholder="메시지를 입력하세요..."
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendCustomMessage()}
+            />
+            <button
+              className={styles.sendButton}
+              onClick={handleSendCustomMessage}
+              disabled={!inputText.trim()}
+            >
+              전송
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 관계 설정 모달 */}
+      {showRelationshipModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowRelationshipModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>관계 설정</h3>
+              <button
+                className={styles.modalCloseButton}
+                onClick={() => setShowRelationshipModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>관계 카테고리</label>
+                <select
+                  className={styles.formSelect}
+                  value={relationshipForm.category}
+                  onChange={(e) => setRelationshipForm({ ...relationshipForm, category: e.target.value })}
+                >
+                  <option value="">-</option>
+                  {Object.entries(RELATIONSHIP_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>존댓말 수준</label>
+                <select
+                  className={styles.formSelect}
+                  value={relationshipForm.politeness}
+                  onChange={(e) => setRelationshipForm({ ...relationshipForm, politeness: e.target.value })}
+                >
+                  <option value="">-</option>
+                  {Object.entries(POLITENESS_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>대화 분위기</label>
+                <select
+                  className={styles.formSelect}
+                  value={relationshipForm.vibe}
+                  onChange={(e) => setRelationshipForm({ ...relationshipForm, vibe: e.target.value })}
+                >
+                  <option value="">-</option>
+                  {Object.entries(VIBE_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>이모지 사용 빈도: {relationshipForm.emojiLevel}</label>
+                <input
+                  type="range"
+                  className={styles.formRange}
+                  min="0"
+                  max="5"
+                  value={relationshipForm.emojiLevel}
+                  onChange={(e) => setRelationshipForm({ ...relationshipForm, emojiLevel: parseInt(e.target.value) })}
+                />
+                <div className={styles.rangeLabels}>
+                  <span>없음</span>
+                  <span>매우 많음</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.modalCancelButton}
+                onClick={() => setShowRelationshipModal(false)}
+              >
+                취소
+              </button>
+              <button
+                className={styles.modalSaveButton}
+                onClick={handleSaveRelationship}
+              >
+                저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
