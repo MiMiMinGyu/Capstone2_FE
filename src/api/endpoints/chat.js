@@ -2,6 +2,17 @@ import api from '../clients/http.js';
 
 // 텔레그램 API 서비스 함수들
 export const telegramAPI = {
+  // 대화 상대 목록 가져오기 (MainPage용 - 추천)
+  getConversations: async () => {
+    try {
+      const response = await api.get('/telegram/conversations');
+      return response.data;
+    } catch (error) {
+      console.error('대화 목록 가져오기 실패:', error);
+      throw error;
+    }
+  },
+
   // 수신된 모든 메시지 가져오기
   getMessages: async (isPolling = false) => {
     try {
@@ -70,6 +81,7 @@ export const telegramAPI = {
 
 // 개별 함수들을 편의를 위해 개별적으로 export
 export const {
+  getConversations,
   getMessages,
   generateRecommendations,
   sendReply,

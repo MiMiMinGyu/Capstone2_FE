@@ -13,9 +13,9 @@
   overflow: hidden;
 }
 
-/* ========== 왼쪽: 채팅 목록 (30-35%) ========== */
+/* ========== 왼쪽: 채팅 목록 (30%) ========== */
 .conversationList {
-  width: 35%;
+  width: 30%;
   background-color: white;
   border-right: 1px solid #e0e0e0;
   display: flex;
@@ -163,7 +163,7 @@
   margin: 0;
 }
 
-/* ========== 오른쪽: 채팅창 (65-70%) ========== */
+/* ========== 오른쪽: 채팅창 (70%) ========== */
 .chatArea {
   flex: 1;
   display: flex;

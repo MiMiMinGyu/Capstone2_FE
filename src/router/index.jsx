@@ -3,6 +3,7 @@ import MainPage from '../pages/main/MainPage';
 import ChatPage from '../pages/chat';
 import LoginPage from '../pages/auth/LoginPage';
 import SignupPage from '../pages/auth/SignupPage';
+import TelegramAPITest from '../pages/test/TelegramAPITest';
 import ProtectedRoute from './ProtectedRoute';
 
 const AppRoutes = () => {
@@ -23,6 +24,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <ChatPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/test/telegram"
+        element={
+          <ProtectedRoute>
+            <TelegramAPITest />
           </ProtectedRoute>
         }
       />
