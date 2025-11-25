@@ -10,8 +10,15 @@ const Header = () => {
   useEffect(() => {
     // 로그인 상태 확인
     const token = localStorage.getItem('access_token');
+    const user = localStorage.getItem('user');
+
+    if (token && user) {
+      const userData = JSON.parse(user);
+      console.log('현재 로그인된 사용자:', userData);
+    }
+
     setIsLoggedIn(!!token);
-  }, []);
+  }, [location]);
 
   // 현재 활성 메뉴 확인
   const isActiveMenu = (menu) => {
@@ -26,7 +33,7 @@ const Header = () => {
       case '채팅':
         return path === '/' || path.startsWith('/chat');
       case '카카오톡 업로드':
-        return path === '/kakao-upload';
+        return path === '/upload';
       case '내 말투 설정':
         return path === '/style-settings';
       case '설정':
@@ -72,8 +79,7 @@ const Header = () => {
         navigate('/');
         break;
       case '카카오톡 업로드':
-        // TODO: 업로드 모달 열기
-        alert('카카오톡 업로드 기능은 곧 구현될 예정입니다');
+        navigate('/upload');
         break;
       case '내 말투 설정':
         // TODO: 말투 설정 모달 열기

@@ -5,10 +5,12 @@ export const telegramAPI = {
   // 대화 상대 목록 가져오기 (MainPage용 - 추천)
   getConversations: async () => {
     try {
+      console.log('📞 [API 호출] GET /telegram/conversations');
       const response = await api.get('/telegram/conversations');
+      console.log('📥 [API 응답] 대화 목록:', response.data);
       return response.data;
     } catch (error) {
-      console.error('대화 목록 가져오기 실패:', error);
+      console.error('❌ [API 실패] 대화 목록 가져오기:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -29,12 +31,14 @@ export const telegramAPI = {
   // 메시지에 대한 AI 추천 답변 생성
   generateRecommendations: async (messageId) => {
     try {
+      console.log('📞 [API 호출] POST /telegram/recommendations', { messageId });
       const response = await api.post('/telegram/recommendations', {
         messageId
       });
+      console.log('📥 [API 응답] 추천 답변:', response.data);
       return response.data;
     } catch (error) {
-      console.error('AI 추천 생성 실패:', error);
+      console.error('❌ [API 실패] AI 추천 생성:', error.response?.data || error.message);
       throw error;
     }
   },

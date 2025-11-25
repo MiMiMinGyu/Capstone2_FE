@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { telegramAPI } from '../../api/endpoints/chat';
 import { relationshipAPI, RELATIONSHIP_LABELS, POLITENESS_LABELS, VIBE_LABELS } from '../../api/endpoints/relationship';
+import api, { refreshAccessToken } from '../../api/clients/http';
 import Header from '../../components/layout/Header';
 import styles from './ChatPage.module.css';
 
@@ -114,32 +115,34 @@ const ChatPage = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `http://localhost:3000/telegram/conversations/${partnerId}/messages`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        }
-      );
+      // axios로 API 호출 (자동 토큰 갱신 지원)
+      const response = await api.get(`/telegram/conversations/${partnerId}/messages`);
+      const data = response.data;
 
-      if (!response.ok) {
-        throw new Error('대화 내역을 불러오지 못했습니다');
-      }
-
-      const data = await response.json();
       setPartner(data.partner);
-      setMessages(data.messages || []);
+
+      // 메시지를 시간순으로 정렬 (오래된 메시지가 위, 최신 메시지가 아래)
+      const sortedMessages = (data.messages || []).sort((a, b) => {
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
+
+      console.log('📝 [메시지 정렬] 총', sortedMessages.length, '개 메시지');
+      setMessages(sortedMessages);
 
       if (data.messages && data.messages.length > 0) {
         const lastMessage = data.messages[data.messages.length - 1];
-        if (lastMessage.role === 'user') {
+        console.log('마지막 메시지:', lastMessage); // 디버깅용
+
+        // 상대방(user)의 메시지이고, messageId가 있을 때만 추천 생성
+        if (lastMessage.role === 'user' && lastMessage.id) {
           handleGenerateRecommendations(lastMessage.id);
+        } else if (lastMessage.role === 'user' && !lastMessage.id) {
+          console.warn('메시지 ID가 없습니다:', lastMessage);
         }
       }
     } catch (err) {
       console.error('대화 메시지 조회 실패:', err);
-      setError(err.message || '대화를 불러오는 중 오류가 발생했습니다');
+      setError(err.response?.data?.message || err.message || '대화를 불러오는 중 오류가 발생했습니다');
     } finally {
       setLoading(false);
     }
@@ -153,21 +156,67 @@ const ChatPage = () => {
       fetchRelationship();
     }
 
-    const eventSource = new EventSource('http://localhost:3000/telegram/events');
+    let eventSource = null;
+    let reconnectTimeout = null;
 
-    eventSource.onmessage = (event) => {
-      const newMessage = JSON.parse(event.data);
-      console.log('새 메시지 도착:', newMessage);
-      fetchConversationMessages();
-      fetchConversations();
+    const connectSSE = () => {
+      // SSE 연결 시 토큰을 쿼리 파라미터로 전달
+      const token = localStorage.getItem('access_token');
+      const sseUrl = `http://localhost:3000/telegram/events?token=${token}`;
+      console.log('📡 [SSE] 연결 시도:', sseUrl);
+
+      eventSource = new EventSource(sseUrl);
+
+      // SSE 연결 성공
+      eventSource.onopen = () => {
+        console.log('✅ [SSE] 연결 성공');
+      };
+
+      // 'newMessage' 타입 이벤트 (백엔드가 event: newMessage로 전송)
+      eventSource.addEventListener('newMessage', (event) => {
+        console.log('📨 [SSE] newMessage 이벤트 수신');
+        console.log('📨 [SSE] Event data:', event.data);
+
+        try {
+          const newMessage = JSON.parse(event.data);
+          console.log('📨 [SSE] Parsed message:', newMessage);
+          console.log('🔄 [SSE] 대화 목록 및 메시지 갱신 시작...');
+          fetchConversationMessages();
+          fetchConversations();
+        } catch (err) {
+          console.error('❌ [SSE] JSON 파싱 실패:', err);
+        }
+      });
+
+      eventSource.onerror = async (error) => {
+        console.error('❌ [SSE] 연결 오류:', error);
+        console.error('❌ [SSE] eventSource.readyState:', eventSource.readyState);
+        eventSource.close();
+
+        // 토큰 갱신 후 3초 후 재연결
+        reconnectTimeout = setTimeout(async () => {
+          try {
+            console.log('🔄 [SSE] 토큰 갱신 중...');
+            await refreshAccessToken();
+            console.log('🔄 [SSE] SSE 재연결 시도...');
+            connectSSE();
+          } catch (err) {
+            console.error('❌ [SSE] 토큰 갱신 실패:', err);
+            // refreshAccessToken이 실패하면 자동으로 로그인 페이지로 리다이렉트됨
+          }
+        }, 3000);
+      };
     };
 
-    eventSource.onerror = (error) => {
-      console.error('SSE 연결 오류:', error);
-    };
+    connectSSE();
 
     return () => {
-      eventSource.close();
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
     };
   }, [partnerId, fetchConversationMessages, fetchConversations, fetchRelationship]);
 
