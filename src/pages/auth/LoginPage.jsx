@@ -58,6 +58,13 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
+      // 로그인 전 기존 토큰 완전 삭제
+      console.log('로그인 시도:', formData.email);
+      console.log('기존 localStorage 정리 중...');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+
       const response = await fetch('http://localhost:3000/auth/login', {
         method: 'POST',
         headers: {
@@ -70,6 +77,7 @@ const LoginPage = () => {
       });
 
       const data = await response.json();
+      console.log('로그인 응답:', data);
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -80,9 +88,16 @@ const LoginPage = () => {
         return;
       }
 
+      // 새 토큰 저장
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
       localStorage.setItem('user', JSON.stringify(data.user));
+
+      console.log('새 토큰 저장 완료:', {
+        user: data.user,
+        access_token_length: data.access_token?.length,
+        refresh_token_length: data.refresh_token?.length
+      });
 
       // 환영 메시지
       const userName = data.user.name || data.user.username || '사용자';

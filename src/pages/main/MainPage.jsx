@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { telegramAPI } from '../../api/endpoints/chat';
+import { refreshAccessToken } from '../../api/clients/http';
 import Header from '../../components/layout/Header';
 import styles from './MainPage.module.css';
 
@@ -12,21 +13,66 @@ const MainPage = () => {
   useEffect(() => {
     fetchConversations();
 
-    // SSE로 실시간 메시지 수신
-    const eventSource = new EventSource('http://localhost:3000/telegram/events');
+    let eventSource = null;
+    let reconnectTimeout = null;
 
-    eventSource.onmessage = (event) => {
-      const newMessage = JSON.parse(event.data);
-      console.log('새 메시지 도착:', newMessage);
-      fetchConversations(); // 새 메시지 도착 시 목록 갱신
+    const connectSSE = () => {
+      // SSE로 실시간 메시지 수신 (토큰을 쿼리 파라미터로 전달)
+      const token = localStorage.getItem('access_token');
+      const sseUrl = `http://localhost:3000/telegram/events?token=${token}`;
+      console.log('📡 [SSE] 연결 시도:', sseUrl);
+
+      eventSource = new EventSource(sseUrl);
+
+      // SSE 연결 성공
+      eventSource.onopen = () => {
+        console.log('✅ [SSE] 연결 성공');
+      };
+
+      // 'newMessage' 타입 이벤트 (백엔드가 event: newMessage로 전송)
+      eventSource.addEventListener('newMessage', (event) => {
+        console.log('📨 [SSE] newMessage 이벤트 수신');
+        console.log('📨 [SSE] Event data:', event.data);
+
+        try {
+          const newMessage = JSON.parse(event.data);
+          console.log('📨 [SSE] Parsed message:', newMessage);
+          console.log('🔄 [SSE] 대화 목록 갱신 시작...');
+          fetchConversations(); // 새 메시지 도착 시 목록 갱신
+        } catch (err) {
+          console.error('❌ [SSE] JSON 파싱 실패:', err);
+        }
+      });
+
+      eventSource.onerror = async (error) => {
+        console.error('❌ [SSE] 연결 오류:', error);
+        console.error('❌ [SSE] eventSource.readyState:', eventSource.readyState);
+        eventSource.close();
+
+        // 토큰 갱신 후 3초 후 재연결
+        reconnectTimeout = setTimeout(async () => {
+          try {
+            console.log('🔄 [SSE] 토큰 갱신 중...');
+            await refreshAccessToken();
+            console.log('🔄 [SSE] SSE 재연결 시도...');
+            connectSSE();
+          } catch (err) {
+            console.error('❌ [SSE] 토큰 갱신 실패:', err);
+            // refreshAccessToken이 실패하면 자동으로 로그인 페이지로 리다이렉트됨
+          }
+        }, 3000);
+      };
     };
 
-    eventSource.onerror = (error) => {
-      console.error('SSE 연결 오류:', error);
-    };
+    connectSSE();
 
     return () => {
-      eventSource.close();
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
     };
   }, []);
 
