@@ -11,7 +11,7 @@
 - **데이터베이스**: PostgreSQL 16 + pgvector
 - **ORM**: Prisma
 - **임베딩 모델**: OpenAI text-embedding-3-small (1536차원)
-- **언어 모델**: GPT (OpenAI API)
+- **언어 모델**: LLM (OpenAI API)
 
 ---
 

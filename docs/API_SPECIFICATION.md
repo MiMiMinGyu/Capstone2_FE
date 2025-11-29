@@ -476,7 +476,7 @@ type GetPartnersResponse = Partner[];
 ```
 
 **참고:**
-- 현재 GPT-4 기반 AI 답변 생성 (RAG + Relationship 설정 반영)
+- 현재 LLM-4 기반 AI 답변 생성 (RAG + Relationship 설정 반영)
 
 ---
 
@@ -674,7 +674,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ## 5. 관계 (Relationships) ✨
 
-Partner와의 관계 설정을 관리하는 API입니다. 관계 설정에 따라 GPT 답변 생성 시 톤과 스타일이 조정됩니다.
+Partner와의 관계 설정을 관리하는 API입니다. 관계 설정에 따라 LLM 답변 생성 시 톤과 스타일이 조정됩니다.
 
 ### 5.1 관계 목록 조회
 
@@ -892,7 +892,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **DELETE** `/relationships/:id`
 
-관계를 삭제합니다. GPT 답변 생성 시 기본 설정으로 돌아갑니다.
+관계를 삭제합니다. LLM 답변 생성 시 기본 설정으로 돌아갑니다.
 
 **요청 Headers:**
 ```
@@ -1275,7 +1275,7 @@ OPENAI_API_KEY=sk-your-openai-api-key
 - ~~`POST /kakao/upload`~~ - 카카오톡 txt 파일 업로드
 - ~~`GET /kakao/partners`~~ - Partner 목록 조회
 - ~~`POST /openai/generate-embeddings`~~ - 임베딩 생성
-- ~~`POST /gpt/generate-reply`~~ - GPT 답변 생성 (RAG + Relationship)
+- ~~`POST /llm/generate-reply`~~ - LLM 답변 생성 (RAG + Relationship)
 - ~~`GET /relationships`~~ - 관계 목록 조회
 - ~~`POST /relationships`~~ - 관계 생성
 - ~~`PATCH /relationships/:id`~~ - 관계 수정

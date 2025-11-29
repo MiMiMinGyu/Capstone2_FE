@@ -176,4 +176,4 @@ async generateRecommendations(
 
 - 총 3개 답변 반환 (긍정, 부정, Default)
 - `tone` 필드 추가로 답변 성격 구분
-- GPT API 1회 호출로 긍정/부정 답변 동시 생성 (비용 절감)
+- LLM API 1회 호출로 긍정/부정 답변 동시 생성 (비용 절감)
