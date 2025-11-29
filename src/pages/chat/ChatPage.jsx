@@ -222,25 +222,41 @@ const ChatPage = () => {
 
   const handleSendReply = async (messageId, selectedReply) => {
     try {
+      console.log('💬 [답변 전송] messageId:', messageId, 'selectedReply:', selectedReply);
       await telegramAPI.sendReply(messageId, selectedReply);
+      console.log('✅ [답변 전송] 성공');
       setRecommendations([]);
       fetchConversationMessages();
     } catch (err) {
-      console.error('답변 전송 실패:', err);
+      console.error('❌ [답변 전송] 실패:', err);
       alert('답변 전송에 실패했습니다');
     }
   };
 
   const handleSendCustomMessage = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim()) {
+      console.warn('⚠️ [메시지 전송] 입력 텍스트가 비어있음');
+      return;
+    }
 
     try {
+      console.log('💬 [메시지 전송] partner:', partner);
+      console.log('💬 [메시지 전송] telegram_id:', partner?.telegram_id);
+      console.log('💬 [메시지 전송] text:', inputText);
+
+      if (!partner || !partner.telegram_id) {
+        console.error('❌ [메시지 전송] partner 정보 없음:', partner);
+        alert('대화 상대 정보를 불러올 수 없습니다');
+        return;
+      }
+
       // 직접 메시지 전송 API 호출
       await telegramAPI.sendMessage(partner.telegram_id, inputText);
+      console.log('✅ [메시지 전송] 성공');
       setInputText('');
       fetchConversationMessages();
     } catch (err) {
-      console.error('메시지 전송 실패:', err);
+      console.error('❌ [메시지 전송] 실패:', err);
       alert('메시지 전송에 실패했습니다');
     }
   };

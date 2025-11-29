@@ -46,13 +46,15 @@ export const telegramAPI = {
   // 선택한 답변 전송
   sendReply: async (messageId, selectedReply) => {
     try {
+      console.log('📞 [API 호출] POST /telegram/reply', { messageId, selectedReply });
       const response = await api.post('/telegram/reply', {
         messageId,
         selectedReply
       });
+      console.log('📥 [API 응답] 답변 전송 성공:', response.data);
       return response.data;
     } catch (error) {
-      console.error('답변 전송 실패:', error);
+      console.error('❌ [API 실패] 답변 전송:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -60,13 +62,15 @@ export const telegramAPI = {
   // 직접 메시지 전송 (옵션)
   sendMessage: async (chatId, text) => {
     try {
+      console.log('📞 [API 호출] POST /telegram/send', { chatId, text });
       const response = await api.post('/telegram/send', {
         chatId,
         text
       });
+      console.log('📥 [API 응답] 메시지 전송 성공:', response.data);
       return response.data;
     } catch (error) {
-      console.error('메시지 전송 실패:', error);
+      console.error('❌ [API 실패] 메시지 전송:', error.response?.data || error.message);
       throw error;
     }
   },

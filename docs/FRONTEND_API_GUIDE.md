@@ -8,7 +8,7 @@
 
 1. [기본 정보](#기본-정보)
 2. [인증 (Authentication)](#인증-authentication)
-3. [GPT 답변 생성](#gpt-답변-생성)
+3. [LLM 답변 생성](#llm-답변-생성)
 4. [말투 설정 관리 (StyleProfile)](#말투-설정-관리-styleprofile)
 5. [카카오톡 업로드](#카카오톡-업로드)
 6. [에러 처리](#에러-처리)
@@ -174,11 +174,11 @@ Authorization: Bearer {access_token}
 
 ---
 
-## GPT 답변 생성
+## LLM 답변 생성
 
 ### 1. 답변 생성
 
-**Endpoint**: `POST /gpt/generate`
+**Endpoint**: `POST /llm/generate`
 
 **Headers**:
 ```http
@@ -218,7 +218,7 @@ Content-Type: application/json
 - `userId`: 현재 로그인한 사용자의 ID (JWT에서 추출 가능)
 - `partnerId`: 대화 상대의 Partner ID (카카오톡 업로드 시 생성됨)
 - `message`: 상대방이 보낸 메시지 내용
-- `reply`: GPT가 생성한 답변
+- `reply`: LLM가 생성한 답변
 - `context`: 디버깅 정보 (프론트에서 선택적 표시 가능)
 
 **에러 응답**:
@@ -229,7 +229,7 @@ Content-Type: application/json
 ```typescript
 // React/Next.js 예시
 const generateReply = async (partnerId: string, message: string) => {
-  const response = await fetch('http://localhost:3000/gpt/generate', {
+  const response = await fetch('http://localhost:3000/llm/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -254,7 +254,7 @@ const generateReply = async (partnerId: string, message: string) => {
 ### 🎯 개요
 
 사용자가 직접 자신의 말투 지향성을 설정할 수 있는 기능입니다.
-- GPT가 답변 생성 시 우선적으로 참고
+- LLM가 답변 생성 시 우선적으로 참고
 - 비속어, 이모티콘 사용 빈도, 문장 길이 등 제어
 - 관계 카테고리별 기본값 설정 가능
 
@@ -262,7 +262,7 @@ const generateReply = async (partnerId: string, message: string) => {
 
 ### 1. 말투 설정 저장/업데이트
 
-**Endpoint**: `POST /gpt/style-profile`
+**Endpoint**: `POST /llm/style-profile`
 
 **Headers**:
 ```http
@@ -316,7 +316,7 @@ const customGuidelines = `
 
 ### 2. 말투 설정 조회
 
-**Endpoint**: `GET /gpt/style-profile`
+**Endpoint**: `GET /llm/style-profile`
 
 **Headers**:
 ```http
@@ -346,7 +346,7 @@ Authorization: Bearer {access_token}
 
 ### 3. 말투 설정 삭제 (기본값으로 리셋)
 
-**Endpoint**: `DELETE /gpt/style-profile`
+**Endpoint**: `DELETE /llm/style-profile`
 
 **Headers**:
 ```http
@@ -446,7 +446,7 @@ Authorization: Bearer {access_token}
 ```
 
 **활용 예시**:
-- GPT 답변 생성 시 `partnerId` 선택을 위한 목록 표시
+- LLM 답변 생성 시 `partnerId` 선택을 위한 목록 표시
 - 관계 카테고리에 따라 UI에 아이콘/색상 표시 가능
 
 ---
@@ -595,14 +595,14 @@ export default api;
 
 **A**: 네, 괜찮습니다.
 - 카카오톡 업로드는 **원본 데이터 그대로** DB에 저장합니다.
-- GPT가 답변 생성 시 **프롬프트의 제약 조건**에 따라 비속어를 **자동 필터링**합니다.
-- 사용자가 "말투 설정"에서 "비속어 사용하지 않음"을 선택하면, GPT는 학습 데이터에 비속어가 있어도 **생성하지 않습니다**.
-- 원본 데이터가 많을수록 GPT가 말투를 더 정확히 학습합니다.
+- LLM가 답변 생성 시 **프롬프트의 제약 조건**에 따라 비속어를 **자동 필터링**합니다.
+- 사용자가 "말투 설정"에서 "비속어 사용하지 않음"을 선택하면, LLM는 학습 데이터에 비속어가 있어도 **생성하지 않습니다**.
+- 원본 데이터가 많을수록 LLM가 말투를 더 정확히 학습합니다.
 
 **권장사항**:
 - 모든 대화 내용을 업로드하세요 (비속어, 이모티콘 포함)
 - "말투 설정"에서 원하는 답변 스타일을 지정하세요
-- GPT가 알아서 필터링하여 답변을 생성합니다
+- LLM가 알아서 필터링하여 답변을 생성합니다
 
 ---
 
@@ -616,7 +616,7 @@ export default api;
 }
 ```
 
-GPT가 답변 생성 시 `receiverInfo.category`를 참고하여 적절한 말투를 선택합니다.
+LLM가 답변 생성 시 `receiverInfo.category`를 참고하여 적절한 말투를 선택합니다.
 
 ---
 
@@ -663,7 +663,7 @@ const uploadKakaoFile = async (file: File) => {
 };
 ```
 
-### 3. GPT 답변 스트리밍 (향후 지원 예정)
+### 3. LLM 답변 스트리밍 (향후 지원 예정)
 
 현재는 전체 답변이 완성된 후 반환됩니다.
 향후 SSE(Server-Sent Events)를 통한 스트리밍 지원 예정입니다.
@@ -675,7 +675,7 @@ const uploadKakaoFile = async (file: File) => {
 | 날짜 | 버전 | 변경 내용 |
 |------|------|-----------|
 | 2025-11-18 | 1.2.0 | StyleProfile API 추가, Default 말투 설정 추가 |
-| 2025-11-18 | 1.1.0 | GPT Service 구현 완료, POST /gpt/generate 추가 |
+| 2025-11-18 | 1.1.0 | LLM Service 구현 완료, POST /llm/generate 추가 |
 | 2025-11-12 | 1.0.0 | 초기 문서 작성 (Auth, Kakao 업로드) |
 
 ---
